@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Play, FileText, AlertTriangle, CheckCircle, Clock, Server, Activity, Terminal, Crosshair, Cpu } from 'lucide-react';
+import { Shield, Play, FileText, AlertTriangle, CheckCircle, Clock, Server, Activity, Terminal, Crosshair, Cpu, Download, Printer } from 'lucide-react';
 
 // Comprehensive Data based on the MITRE ATT&CK Framework
 const mitreData = {
@@ -248,19 +248,54 @@ export default function App() {
 
   const getSeverityColor = (severity) => {
     switch(severity) {
-      case 'Critical': return 'text-rose-400 bg-rose-400/10 border-rose-400/20';
-      case 'Medium': return 'text-amber-400 bg-amber-400/10 border-amber-400/20';
-      case 'Low': return 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20';
-      default: return 'text-slate-400 bg-slate-400/10 border-slate-400/20';
+      case 'Critical': return 'text-rose-400 bg-rose-400/10 border-rose-400/20 print:text-red-700 print:bg-red-100 print:border-red-300';
+      case 'Medium': return 'text-amber-400 bg-amber-400/10 border-amber-400/20 print:text-amber-700 print:bg-amber-100 print:border-amber-300';
+      case 'Low': return 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20 print:text-green-700 print:bg-green-100 print:border-green-300';
+      default: return 'text-slate-400 bg-slate-400/10 border-slate-400/20 print:text-slate-700 print:bg-slate-100 print:border-slate-300';
     }
   };
 
+  const handleExportCSV = () => {
+    if (!report) return;
+    
+    // Create CSV content
+    const headers = ['Simulation ID', 'Timestamp', 'Target', 'Tactic', 'Technique', 'Procedure', 'Status', 'Severity', 'Details', 'Recommendation'];
+    const row = [
+      report.id,
+      `"${report.timestamp}"`,
+      `"${report.target}"`,
+      `"${report.tactic}"`,
+      `"${report.technique}"`,
+      `"${report.procedure}"`,
+      `"${report.status}"`,
+      report.severity,
+      `"${report.details}"`,
+      `"${report.recommendation}"`
+    ];
+    
+    const csvContent = headers.join(',') + '\n' + row.join(',');
+    
+    // Create blob and trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `ATTACK_Sim_Report_${report.id}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportPDF = () => {
+    window.print();
+  };
+
   return (
-    <div className="min-h-screen bg-[#0a0f1c] bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(29,78,216,0.15),rgba(255,255,255,0))] text-slate-200 p-4 sm:p-8 font-sans selection:bg-indigo-500/30">
+    <div className="min-h-screen bg-[#0a0f1c] bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(29,78,216,0.15),rgba(255,255,255,0))] print:bg-white print:bg-none text-slate-200 print:text-slate-900 p-4 sm:p-8 font-sans selection:bg-indigo-500/30">
       <div className="max-w-7xl mx-auto space-y-8">
         
-        {/* Header */}
-        <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-white/10 pb-6 gap-4">
+        {/* Header - Hidden on Print */}
+        <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-white/10 pb-6 gap-4 print:hidden">
           <div className="flex items-center space-x-4">
             <div className="p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
               <Shield className="w-8 h-8 text-indigo-400" />
@@ -281,8 +316,8 @@ export default function App() {
 
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
           
-          {/* Configuration Panel */}
-          <div className="xl:col-span-4 bg-slate-900/50 backdrop-blur-xl rounded-2xl border border-white/5 shadow-2xl p-6 space-y-6 relative overflow-hidden">
+          {/* Configuration Panel - Hidden on Print */}
+          <div className="xl:col-span-4 bg-slate-900/50 backdrop-blur-xl rounded-2xl border border-white/5 shadow-2xl p-6 space-y-6 relative overflow-hidden print:hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
             
             <div className="flex items-center space-x-2 pb-2 border-b border-white/5">
@@ -384,10 +419,10 @@ export default function App() {
           </div>
 
           {/* Main Execution / Report Area */}
-          <div className="xl:col-span-8 space-y-8 flex flex-col">
+          <div className="xl:col-span-8 print:col-span-12 space-y-8 flex flex-col">
             
-            {/* Execution Status Panel / Fake Terminal */}
-            <div className="bg-black/60 backdrop-blur-md rounded-2xl shadow-2xl border border-white/10 p-1 flex flex-col relative overflow-hidden flex-shrink-0">
+            {/* Execution Status Panel / Fake Terminal - Hidden on Print */}
+            <div className="bg-black/60 backdrop-blur-md rounded-2xl shadow-2xl border border-white/10 p-1 flex flex-col relative overflow-hidden flex-shrink-0 print:hidden">
               <div className="flex items-center justify-between px-4 py-3 bg-white/[0.02] border-b border-white/5 rounded-t-xl">
                 <div className="flex items-center space-x-2">
                   <Terminal className="w-4 h-4 text-slate-400" />
@@ -439,80 +474,100 @@ export default function App() {
 
             {/* Report Panel */}
             {report && (
-              <div className="flex-grow bg-slate-900/50 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/5 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-500">
-                <div className="px-6 py-5 border-b border-white/5 flex flex-wrap items-center justify-between bg-white/[0.02] gap-4">
+              <div className="flex-grow bg-slate-900/50 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/5 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-500 print:shadow-none print:border-slate-300 print:bg-white">
+                <div className="px-6 py-5 border-b border-white/5 print:border-slate-200 flex flex-wrap items-center justify-between bg-white/[0.02] gap-4 print:bg-slate-50">
                   <div className="flex items-center">
-                    <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20 mr-3">
-                      <FileText className="w-5 h-5 text-blue-400" />
+                    <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20 mr-3 print:bg-blue-100 print:border-blue-300">
+                      <FileText className="w-5 h-5 text-blue-400 print:text-blue-700" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-bold text-white">Post-Simulation Analysis</h2>
-                      <p className="text-xs font-mono text-slate-400 mt-0.5">ID: {report.id}</p>
+                      <h2 className="text-lg font-bold text-white print:text-slate-900">Post-Simulation Analysis</h2>
+                      <p className="text-xs font-mono text-slate-400 mt-0.5 print:text-slate-500">ID: {report.id}</p>
                     </div>
                   </div>
-                  <div className={`px-3 py-1 rounded-full border text-xs font-bold tracking-wide uppercase flex items-center ${getSeverityColor(report.severity)}`}>
-                    {report.severity === 'Critical' && <AlertTriangle className="w-3.5 h-3.5 mr-1.5" />}
-                    {report.severity === 'Low' && <CheckCircle className="w-3.5 h-3.5 mr-1.5" />}
-                    {report.severity} RISK
+                  <div className="flex items-center space-x-4">
+                    <div className={`px-3 py-1 rounded-full border text-xs font-bold tracking-wide uppercase flex items-center ${getSeverityColor(report.severity)}`}>
+                      {report.severity === 'Critical' && <AlertTriangle className="w-3.5 h-3.5 mr-1.5" />}
+                      {report.severity === 'Low' && <CheckCircle className="w-3.5 h-3.5 mr-1.5" />}
+                      {report.severity} RISK
+                    </div>
+                    
+                    {/* Export Actions - Hidden on Print */}
+                    <div className="flex items-center space-x-2 border-l border-white/10 pl-4 print:hidden">
+                      <button 
+                        onClick={handleExportCSV}
+                        className="p-1.5 bg-white/5 hover:bg-white/10 rounded-md transition-colors text-slate-300 hover:text-white"
+                        title="Download CSV"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={handleExportPDF}
+                        className="p-1.5 bg-white/5 hover:bg-white/10 rounded-md transition-colors text-slate-300 hover:text-white"
+                        title="Print / Save as PDF"
+                      >
+                        <Printer className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
                 
                 <div className="p-6 space-y-8">
                   {/* Status Banner */}
                   <div className={`p-4 rounded-xl border flex items-start space-x-4 bg-black/20 ${
-                    report.severity === 'Critical' ? 'border-rose-500/30' : 
-                    report.severity === 'Medium' ? 'border-amber-500/30' : 
-                    'border-emerald-500/30'
+                    report.severity === 'Critical' ? 'border-rose-500/30 print:bg-red-50 print:border-red-200' : 
+                    report.severity === 'Medium' ? 'border-amber-500/30 print:bg-amber-50 print:border-amber-200' : 
+                    'border-emerald-500/30 print:bg-green-50 print:border-green-200'
                   }`}>
                     <div className="mt-1">
                       {report.severity === 'Low' ? (
-                        <CheckCircle className="w-6 h-6 text-emerald-400" />
+                        <CheckCircle className="w-6 h-6 text-emerald-400 print:text-green-600" />
                       ) : (
-                        <AlertTriangle className={`w-6 h-6 ${report.severity === 'Critical' ? 'text-rose-400' : 'text-amber-400'}`} />
+                        <AlertTriangle className={`w-6 h-6 ${report.severity === 'Critical' ? 'text-rose-400 print:text-red-600' : 'text-amber-400 print:text-amber-600'}`} />
                       )}
                     </div>
                     <div>
                       <h3 className={`text-base font-bold tracking-wide ${
-                        report.severity === 'Critical' ? 'text-rose-400' : 
-                        report.severity === 'Medium' ? 'text-amber-400' : 
-                        'text-emerald-400'
+                        report.severity === 'Critical' ? 'text-rose-400 print:text-red-800' : 
+                        report.severity === 'Medium' ? 'text-amber-400 print:text-amber-800' : 
+                        'text-emerald-400 print:text-green-800'
                       }`}>
                         {report.status}
                       </h3>
-                      <p className="mt-1.5 text-sm text-slate-300 leading-relaxed">{report.details}</p>
+                      <p className="mt-1.5 text-sm text-slate-300 print:text-slate-700 leading-relaxed">{report.details}</p>
                     </div>
                   </div>
 
                   {/* Details Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="p-4 rounded-xl bg-black/40 border border-white/5 space-y-1.5">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Target</span>
-                      <span className="block text-slate-200 font-mono text-sm truncate" title={report.target}>{report.target}</span>
+                    <div className="p-4 rounded-xl bg-black/40 border border-white/5 print:bg-white print:border-slate-200 space-y-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 print:text-slate-400">Target</span>
+                      <span className="block text-slate-200 print:text-slate-800 font-mono text-sm truncate" title={report.target}>{report.target}</span>
                     </div>
-                    <div className="p-4 rounded-xl bg-black/40 border border-white/5 space-y-1.5">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Execution Time</span>
-                      <span className="flex items-center text-slate-200 text-sm">
-                        <Clock className="w-3.5 h-3.5 mr-1.5 text-slate-400" /> 
+                    <div className="p-4 rounded-xl bg-black/40 border border-white/5 print:bg-white print:border-slate-200 space-y-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 print:text-slate-400">Execution Time</span>
+                      <span className="flex items-center text-slate-200 print:text-slate-800 text-sm">
+                        <Clock className="w-3.5 h-3.5 mr-1.5 text-slate-400 print:text-slate-500" /> 
                         {report.timestamp.split(', ')[1]}
                       </span>
                     </div>
-                    <div className="p-4 rounded-xl bg-black/40 border border-white/5 space-y-1.5">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Tactic</span>
-                      <span className="block text-slate-200 text-sm truncate" title={report.tactic}>{report.tactic}</span>
+                    <div className="p-4 rounded-xl bg-black/40 border border-white/5 print:bg-white print:border-slate-200 space-y-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 print:text-slate-400">Tactic</span>
+                      <span className="block text-slate-200 print:text-slate-800 text-sm truncate" title={report.tactic}>{report.tactic}</span>
                     </div>
-                    <div className="p-4 rounded-xl bg-black/40 border border-white/5 space-y-1.5">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Technique</span>
-                      <span className="block text-slate-200 text-sm truncate" title={report.technique}>{report.technique}</span>
+                    <div className="p-4 rounded-xl bg-black/40 border border-white/5 print:bg-white print:border-slate-200 space-y-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 print:text-slate-400">Technique</span>
+                      <span className="block text-slate-200 print:text-slate-800 text-sm truncate" title={report.technique}>{report.technique}</span>
                     </div>
                   </div>
 
                   {/* Recommendation */}
-                  <div className="rounded-xl bg-indigo-500/5 border border-indigo-500/10 p-5">
-                    <h4 className="text-xs font-bold uppercase tracking-widest text-indigo-400 mb-3 flex items-center">
+                  <div className="rounded-xl bg-indigo-500/5 border border-indigo-500/10 print:bg-indigo-50 print:border-indigo-200 p-5">
+                    <h4 className="text-xs font-bold uppercase tracking-widest text-indigo-400 print:text-indigo-800 mb-3 flex items-center">
                       <Shield className="w-4 h-4 mr-2" />
                       Recommended Action Plan
                     </h4>
-                    <p className="text-sm text-slate-300 leading-relaxed">
+                    <p className="text-sm text-slate-300 print:text-slate-700 leading-relaxed">
                       {report.recommendation}
                     </p>
                   </div>
@@ -528,6 +583,15 @@ export default function App() {
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+        
+        @media print {
+          @page { margin: 1cm; size: auto; }
+          body { 
+            background: white !important; 
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+        }
       `}} />
     </div>
   );
